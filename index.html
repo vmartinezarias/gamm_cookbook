@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>The Ecologist's GAMM Cookbook</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        body { font-family: 'Inter', sans-serif; background-color: #fdfaf6; color: #333; }
+        .code-font { font-family: 'JetBrains Mono', monospace; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* Chart Container Styling - Mandatory */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
+
+        .step-card { transition: all 0.3s ease; border-left: 4px solid transparent; }
+        .step-card:hover { transform: translateX(5px); border-left-color: #84cc16; }
+        .step-card.active { border-left-color: #65a30d; background-color: #f7fee7; }
+
+        .btn-toggle { transition: background-color 0.2s; }
+        .btn-toggle:hover { background-color: #e5e7eb; }
+        .btn-toggle.selected { background-color: #3f6212; color: white; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Chosen Palette: "Sage & Soil" - Warm neutrals (#fdfaf6) background, earthy greens (#3f6212, #84cc16) for primary actions, and slate grays for text. Designed to feel organic and scientific. -->
+
+    <!-- Header -->
+    <header class="bg-white border-b border-stone-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🌿</span>
+                <h1 class="text-xl font-bold text-stone-800 tracking-tight">The Ecologist's GAMM Cookbook <span class="text-xs font-normal text-stone-500 ml-2">using R package 'mgcv'</span></h1>
+            </div>
+            <div class="text-sm text-stone-500 hidden md:block">Interactive Guide to Generalized Additive Mixed Models</div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6 lg:p-8">
+
+        <!-- Left Sidebar: Recipe Steps -->
+        <aside class="lg:col-span-3 space-y-4">
+            <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-4 sticky top-24">
+                <h2 class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4">Recipe Stages</h2>
+                <nav class="space-y-2" id="nav-container">
+                    <!-- Nav items injected via JS -->
+                </nav>
+            </div>
+
+            <div class="bg-stone-100 rounded-xl p-4 text-xs text-stone-600">
+                <p class="font-bold mb-1">Quick Tips:</p>
+                <ul class="list-disc pl-4 space-y-1">
+                    <li><strong>GAMM:</strong> Gen. Additive Mixed Model.</li>
+                    <li><strong>mgcv:</strong> The engine (Wood, 2017).</li>
+                    <li><strong>s():</strong> Smooth term.</li>
+                    <li><strong>k:</strong> Basis dimension (knots).</li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Right Workspace -->
+        <div class="lg:col-span-9 space-y-8" id="workspace">
+
+            <!-- Section 1: Introduction -->
+            <section id="intro" class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 sm:p-8">
+                <div class="max-w-3xl">
+                    <h2 class="text-3xl font-bold text-stone-800 mb-4">Mastering the Non-Linear</h2>
+                    <p class="text-stone-600 mb-6 leading-relaxed">
+                        Ecological data is rarely linear. Species response curves are often bell-shaped, growth is asymptotic, and spatial patterns are complex. 
+                        <strong>GAMMs</strong> allow you to model these "wiggly" relationships while accounting for the random noise typical of field data (sites, years, blocks).
+                    </p>
+                    <div class="bg-lime-50 border border-lime-200 rounded-lg p-4">
+                        <p class="text-lime-800 text-sm">
+                            <strong>Cookbook Objective:</strong> This tool helps you select the right "ingredients" (distribution, link function), prepare your "utensils" (smoothers), and cook up a robust model code for R.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: The Pantry (Distributions) -->
+            <section id="pantry" class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 sm:p-8 scroll-mt-24">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                    <div>
+                        <h3 class="text-2xl font-bold text-stone-800">1. The Pantry: Inputs & Distributions</h3>
+                        <p class="text-stone-500 text-sm mt-1">Select your data type to find the correct distribution family.</p>
+                    </div>
+                </div>
+
+                <!-- Intro Paragraph -->
+                <p class="text-stone-600 mb-6 text-sm">
+                    The most critical step in GAMM modelling is defining the nature of your response variable (Y). Choosing the wrong family violates assumptions immediately. Click the buttons below that match your data to see the recommended R syntax.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Interactive Selector -->
+                    <div class="space-y-4">
+                        <label class="block text-sm font-semibold text-stone-700">What does your Response Variable (Y) look like?</label>
+                        <div class="grid grid-cols-1 gap-3">
+                            <button onclick="updatePantry('continuous', this)" class="btn-toggle w-full text-left px-4 py-3 rounded-lg border border-stone-200 font-medium text-stone-600 hover:border-lime-500 focus:outline-none">
+                                📏 Continuous (Temperature, Size, Biomass)
+                            </button>
+                            <button onclick="updatePantry('count', this)" class="btn-toggle w-full text-left px-4 py-3 rounded-lg border border-stone-200 font-medium text-stone-600 hover:border-lime-500 focus:outline-none">
+                                🔢 Counts (Abundance, Species Richness)
+                            </button>
+                            <button onclick="updatePantry('binary', this)" class="btn-toggle w-full text-left px-4 py-3 rounded-lg border border-stone-200 font-medium text-stone-600 hover:border-lime-500 focus:outline-none">
+                                ⚖️ Binary / Proportion (Presence/Absence, Survival)
+                            </button>
+                            <button onclick="updatePantry('positive', this)" class="btn-toggle w-full text-left px-4 py-3 rounded-lg border border-stone-200 font-medium text-stone-600 hover:border-lime-500 focus:outline-none">
+                                ➕ Strictly Positive Continuous (Rainfall, Distance)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Output Card -->
+                    <div class="bg-stone-900 rounded-xl p-6 text-stone-100 flex flex-col justify-between h-full relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl font-serif">R</div>
+                        <div>
+                            <h4 class="text-stone-400 text-xs uppercase tracking-wider mb-2">Recommended Family</h4>
+                            <div id="family-output" class="text-xl font-bold text-lime-400 code-font mb-4">
+                                family = gaussian()
+                            </div>
+                            <h4 class="text-stone-400 text-xs uppercase tracking-wider mb-2">Notes & Caveats</h4>
+                            <p id="family-notes" class="text-sm text-stone-300 leading-relaxed">
+                                Standard normal distribution. Assumes residuals are normally distributed. Good for general measurements like length or weight.
+                            </p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-stone-800">
+                            <h4 class="text-stone-400 text-xs uppercase tracking-wider mb-1">Key Tip</h4>
+                            <p id="family-tip" class="text-xs text-stone-500">Check for heteroscedasticity (unequal variance).</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: The Prep (Smoothers) -->
+            <section id="smoothers" class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 sm:p-8 scroll-mt-24">
+                <h3 class="text-2xl font-bold text-stone-800 mb-2">2. The Prep: Smoothers & Basis Functions</h3>
+                <p class="text-stone-600 mb-6 text-sm">
+                    The <code>s()</code> function is the magic of a GAM. It fits a spline to the data. The 'wiggliness' is controlled by penalization, but you must set an upper limit on complexity using <code>k</code> (basis dimension).
+                    <br><br>
+                    <strong>Use the slider below</strong> to see how changing <code>k</code> affects the model's ability to capture the ecological trend.
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Controls -->
+                    <div class="lg:col-span-1 bg-stone-50 p-6 rounded-xl border border-stone-100 flex flex-col justify-center">
+                        <label for="k-slider" class="block text-sm font-bold text-stone-700 mb-4">Basis Dimension (k)</label>
+                        <input type="range" id="k-slider" min="3" max="20" value="5" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-lime-600 mb-2">
+                        <div class="flex justify-between text-xs text-stone-500 mb-6">
+                            <span>Simple (k=3)</span>
+                            <span>Complex (k=20)</span>
+                        </div>
+
+                        <div id="k-feedback" class="p-3 rounded bg-white border border-stone-200 text-sm text-stone-700">
+                            Current k: <strong>5</strong>
+                        </div>
+                        <p class="text-xs text-stone-500 mt-4 italic">
+                            Ecological Rule of Thumb: Start with k=10 per covariate (default). Increase if <code>gam.check()</code> significant.
+                        </p>
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="lg:col-span-2">
+                        <div class="chart-container">
+                            <canvas id="smoothChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: The Cooking (Code Builder) -->
+            <section id="builder" class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 sm:p-8 scroll-mt-24">
+                <h3 class="text-2xl font-bold text-stone-800 mb-2">3. The Cooking: Model Builder</h3>
+                <p class="text-stone-600 mb-6 text-sm">
+                    Construct your R code by adding ingredients. This tool helps you distinguish between Fixed Effects (linear terms), Smooth Terms (non-linear), and Random Effects (grouping factors).
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Input Form -->
+                    <div class="space-y-6">
+                        <!-- Variables -->
+                        <div>
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Add Covariates</label>
+                            <div class="flex gap-2 mb-2">
+                                <input type="text" id="covariate-name" placeholder="Var Name (e.g. depth)" class="flex-1 px-3 py-2 border border-stone-200 rounded text-sm focus:border-lime-500 outline-none">
+                                <select id="covariate-type" class="px-3 py-2 border border-stone-200 rounded text-sm bg-white">
+                                    <option value="smooth">Smooth s(...)</option>
+                                    <option value="linear">Linear (+ ...)</option>
+                                    <option value="factor">Factor (as.factor)</option>
+                                </select>
+                                <button onclick="addCovariate()" class="bg-lime-600 hover:bg-lime-700 text-white px-4 py-2 rounded text-sm transition-colors">Add</button>
+                            </div>
+                        </div>
+
+                        <!-- Random Effects -->
+                        <div>
+                            <label class="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Random Effects (Mixed Model)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="random-effect" placeholder="Grouping (e.g. SiteID)" class="flex-1 px-3 py-2 border border-stone-200 rounded text-sm focus:border-lime-500 outline-none">
+                                <button onclick="addRandom()" class="bg-stone-600 hover:bg-stone-700 text-white px-4 py-2 rounded text-sm transition-colors">Add RE</button>
+                            </div>
+                            <p class="text-xs text-stone-400 mt-1">Use for nested data, repeated measures, or blocks.</p>
+                        </div>
+
+                        <!-- Reset -->
+                        <button onclick="resetBuilder()" class="text-xs text-red-500 hover:text-red-700 underline">Reset Recipe</button>
+                    </div>
+
+                    <!-- Code Output -->
+                    <div class="bg-stone-900 rounded-xl p-6 relative group">
+                        <button onclick="copyCode()" class="absolute top-4 right-4 text-stone-500 hover:text-white text-xs bg-stone-800 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>
+                        <h4 class="text-stone-400 text-xs uppercase tracking-wider mb-4">Generated R Code</h4>
+                        <pre class="code-font text-sm text-lime-300 whitespace-pre-wrap leading-relaxed" id="code-output">
+# Load Library
+library(mgcv)
+
+# 1. Fit the Model
+model <- gam(Response ~ 
+  s(Predictor1, k=10) + 
+  Predictor2, 
+  data = df, 
+  method = "REML",
+  family = gaussian())
+                        </pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Taste Test (Validation) -->
+            <section id="validation" class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 sm:p-8 scroll-mt-24">
+                <h3 class="text-2xl font-bold text-stone-800 mb-4">4. The Taste Test: Validation</h3>
+                <p class="text-stone-600 mb-6 text-sm">
+                    Never trust a model immediately. In ecology, checking for spatial/temporal autocorrelation and adequate wiggliness is mandatory.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Check 1 -->
+                    <div class="border border-stone-100 rounded-lg p-4 bg-stone-50">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-lime-600 text-lg">🔍</span>
+                            <h4 class="font-bold text-stone-800 text-sm">Basis Dimension Check</h4>
+                        </div>
+                        <code class="block text-xs bg-white p-2 border border-stone-200 rounded mb-2 code-font">gam.check(model)</code>
+                        <p class="text-xs text-stone-600">
+                            Look at the p-value for k-index. If low (&lt; 0.05), you might be <strong>undersmoothing</strong>. Increase `k` in your s() terms.
+                        </p>
+                    </div>
+
+                    <!-- Check 2 -->
+                    <div class="border border-stone-100 rounded-lg p-4 bg-stone-50">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-lime-600 text-lg">📈</span>
+                            <h4 class="font-bold text-stone-800 text-sm">Concurvity</h4>
+                        </div>
+                        <code class="block text-xs bg-white p-2 border border-stone-200 rounded mb-2 code-font">concurvity(model)</code>
+                        <p class="text-xs text-stone-600">
+                            The non-linear equivalent of collinearity. If values &gt; 0.8, your smooth terms are confounding each other.
+                        </p>
+                    </div>
+
+                    <!-- Check 3 -->
+                    <div class="border border-stone-100 rounded-lg p-4 bg-stone-50">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-lime-600 text-lg">🗺️</span>
+                            <h4 class="font-bold text-stone-800 text-sm">Autocorrelation</h4>
+                        </div>
+                        <code class="block text-xs bg-white p-2 border border-stone-200 rounded mb-2 code-font">acf(residuals(model))</code>
+                        <p class="text-xs text-stone-600">
+                            If bars go outside the blue lines at lag 1, 2, etc., you need a correlation structure (e.g., AR1) in a <code>gamm()</code> call.
+                        </p>
+                    </div>
+
+                    <!-- Check 4 -->
+                    <div class="border border-stone-100 rounded-lg p-4 bg-stone-50">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-lime-600 text-lg">👁️</span>
+                            <h4 class="font-bold text-stone-800 text-sm">Visual Check</h4>
+                        </div>
+                        <code class="block text-xs bg-white p-2 border border-stone-200 rounded mb-2 code-font">plot(model, pages=1)</code>
+                        <p class="text-xs text-stone-600">
+                            Do the curves make biological sense? If a response curve oscillates wildly at the edges where data is scarce, constrain it!
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Plating (Literature Example) -->
+            <section id="example" class="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 sm:p-8 scroll-mt-24">
+                <div class="border-l-4 border-lime-500 pl-4 mb-6">
+                    <h3 class="text-2xl font-bold text-stone-800">5. Plating: Literature Example</h3>
+                    <p class="text-sm text-stone-500">Based on standard workflows in <em>Zuur et al. (2009)</em> & <em>Wood (2017)</em></p>
+                </div>
+
+                <div class="space-y-6">
+                    <p class="text-stone-600 text-sm">
+                        <strong>Scenario:</strong> Investigating the effect of <span class="text-blue-600 font-semibold">Depth</span> and <span class="text-orange-600 font-semibold">Season</span> on the abundance of a benthic fish species (Count data), while accounting for sampling <span class="text-purple-600 font-semibold">Stations</span> (Random Effect).
+                    </p>
+
+                    <div class="bg-stone-50 p-4 rounded-xl border border-stone-200">
+                        <h4 class="text-sm font-bold text-stone-700 mb-2">1. The Ingredients</h4>
+                        <ul class="text-xs text-stone-600 space-y-1 mb-4 grid grid-cols-2">
+                            <li>• Response: Abundance (Count)</li>
+                            <li>• Family: Negative Binomial (Overdispersion)</li>
+                            <li>• Predictor 1: Depth (Continuous, Non-linear)</li>
+                            <li>• Predictor 2: Season (Factor)</li>
+                            <li>• Random Effect: Station (Intercept)</li>
+                        </ul>
+
+                        <h4 class="text-sm font-bold text-stone-700 mb-2">2. The Code</h4>
+                        <pre class="code-font text-xs bg-stone-900 text-lime-300 p-4 rounded-lg overflow-x-auto">
+# We use 'negbin' family for overdispersed counts
+# 'bs="re"' creates a random effect for StationID
+
+final_model <- gam(Abundance ~ 
+    s(Depth, k=5) +                # Smooth effect of depth
+    Season +                       # Linear factor effect
+    s(StationID, bs="re"),         # Random intercept for Station
+    data = benthic_data,
+    family = nb(),                 # Negative Binomial
+    method = "REML")               # REML is preferred for smooths
+
+summary(final_model)
+plot(final_model, pages=1, all.terms=TRUE</pre>
+                    </div>
+
+                    <div class="flex gap-4 items-start">
+                        <div class="flex-1 text-sm text-stone-600">
+                            <strong>Interpretation:</strong> 
+                            The <code>s(Depth)</code> plot shows a hump-shaped curve, indicating preference for mid-depths. The random effect <code>s(StationID, bs="re")</code> captures the variance between stations that isn't explained by Depth or Season, preventing pseudoreplication.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="text-center text-xs text-stone-400 pb-8">
+                Generated for Ecology Modelling • Package Reference: `mgcv` (Wood) • Not `mvgc` (Granger Causality)
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        // --- 1. Pantry Logic (Distributions) ---
+        const familyInfo = {
+            'continuous': {
+                fam: 'gaussian()',
+                note: 'Standard normal distribution. Assumes residuals are normally distributed. Good for general measurements like length, weight, or temperature.',
+                tip: 'Check for heteroscedasticity (unequal variance). If variance increases with mean, consider Gamma().'
+            },
+            'count': {
+                fam: 'poisson() or nb()',
+                note: 'Poisson for simple counts. Negative Binomial (nb) if Variance >> Mean (Overdispersion), which is common in ecology.',
+                tip: 'Start with Poisson. If `gam.check()` shows overdispersion > 1.5, switch to `nb()`.'
+            },
+            'binary': {
+                fam: 'binomial(link="logit")',
+                note: '0/1 data, presence/absence, or proportions (bound between 0 and 1).',
+                tip: 'Also known as Logistic Regression when used in a GAM.'
+            },
+            'positive': {
+                fam: 'Gamma(link="log")',
+                note: 'For continuous data that cannot be negative (e.g., rainfall, distance, biomass). Handles skewness well.',
+                tip: 'Zero values are not allowed in Gamma. If you have zeros, look into "Tweedie" distributions.'
+            }
+        };
+
+        function updatePantry(type, el) {
+            // Update UI buttons
+            document.querySelectorAll('.btn-toggle').forEach(b => b.classList.remove('selected'));
+            if (el && el.classList) el.classList.add('selected');
+
+            // Update Text
+            const info = familyInfo[type];
+            if (!info) return;
+            document.getElementById('family-output').textContent = `family = ${info.fam}`;
+            document.getElementById('family-notes').textContent = info.note;
+            document.getElementById('family-tip').textContent = info.tip;
+        }
+
+
+        // --- 2. Smoother Visualization (Chart.js) ---
+        let smoothChart;
+
+        function initChart() {
+            const ctx = document.getElementById('smoothChart').getContext('2d');
+
+            // Generate some dummy ecological data (hump shape + noise)
+            const x = Array.from({length: 50}, (_, i) => i);
+            const trueY = x.map(val => 100 - Math.pow(val - 25, 2)/5); // Parabola
+            const noise = x.map(() => (Math.random() - 0.5) * 40);
+            const points = x.map((val, i) => ({x: val, y: trueY[i] + noise[i]}));
+
+            smoothChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Observations',
+                            data: points,
+                            backgroundColor: '#a3a3a3',
+                            pointRadius: 4,
+                            order: 2
+                        },
+                        {
+                            label: 'Model Fit',
+                            data: [], // Filled by update function
+                            borderColor: '#65a30d',
+                            borderWidth: 3,
+                            type: 'line',
+                            pointRadius: 0,
+                            tension: 0.4, // Smoothness
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: { mode: 'index', intersect: false },
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                }
+            });
+
+            updateSmoother(5); // Initial k
+        }
+
+        function updateSmoother(k) {
+            const sliderVal = parseInt(k);
+            const feedback = document.getElementById('k-feedback');
+
+            // Update feedback display value
+            feedback.querySelector('strong')?.parentNode && null; // noop to avoid lint
+
+            // Generate "fitted" line based on K
+            // Simulation: Low K = Stiff line, High K = Wiggly line fitting noise
+            const x = Array.from({length: 50}, (_, i) => i);
+
+            let fittedData;
+
+            if (sliderVal < 5) {
+                // Undersmoothed (Too stiff, basically linear/quadratic)
+                feedback.innerHTML = `k = ${sliderVal}: <strong>Undersmoothed</strong>. The model is too rigid and misses the peak.`;
+                fittedData = x.map(val => ({x: val, y: 50 + val})); // Poor linear fit
+            } else if (sliderVal >= 5 && sliderVal <= 12) {
+                // Just Right (Captures the hump)
+                feedback.innerHTML = `k = ${sliderVal}: <strong>Good Fit</strong>. Captures the main trend without chasing noise.`;
+                fittedData = x.map(val => ({x: val, y: 100 - Math.pow(val - 25, 2)/5})); // True curve
+            } else {
+                // Oversmoothed (Chasing noise)
+                feedback.innerHTML = `k = ${sliderVal}: <strong>Oversmoothed</strong>. The curve is wiggling to fit random noise. Risk of overfitting.`;
+                // Add sine wave wiggle to the true curve
+                fittedData = x.map(val => ({
+                    x: val,
+                    y: (100 - Math.pow(val - 25, 2)/5) + (Math.sin(val) * (sliderVal * 2))
+                }));
+            }
+
+            smoothChart.data.datasets[1].data = fittedData;
+            smoothChart.update();
+        }
+
+        // Add event listener to slider (element exists before this script runs because script is at end of body)
+        const kSliderEl = document.getElementById('k-slider');
+        if (kSliderEl) {
+            kSliderEl.addEventListener('input', (e) => {
+                updateSmoother(e.target.value);
+            });
+        }
+
+
+        // --- 3. Model Builder Logic ---
+        const builderState = {
+            covariates: [],
+            random: []
+        };
+
+        function addCovariate() {
+            const name = document.getElementById('covariate-name').value.trim();
+            const type = document.getElementById('covariate-type').value;
+
+            if(!name) return;
+
+            let term = name;
+            if (type === 'smooth') term = `s(${name}, k=10)`;
+            if (type === 'factor') term = `as.factor(${name})`;
+
+            builderState.covariates.push(term);
+            document.getElementById('covariate-name').value = '';
+            renderCode();
+        }
+
+        function addRandom() {
+            const name = document.getElementById('random-effect').value.trim();
+            if(!name) return;
+
+            // mgcv way: s(factor, bs="re")
+            const term = `s(${name}, bs="re")`;
+            builderState.random.push(term);
+            document.getElementById('random-effect').value = '';
+            renderCode();
+        }
+
+        function resetBuilder() {
+            builderState.covariates = [];
+            builderState.random = [];
+            renderCode();
+        }
+
+        function renderCode() {
+            const allTerms = [...builderState.covariates, ...builderState.random];
+            const formula = allTerms.length > 0 ? allTerms.join(" + \n  ") : "...";
+
+            const code = `# Load Library
+library(mgcv)
+
+# Fit the Model
+model <- gam(Response ~ 
+  ${formula}, 
+  data = df, 
+  method = "REML",
+  family = gaussian())`;
+
+            document.getElementById('code-output').textContent = code;
+        }
+
+        function copyCode() {
+            const text = document.getElementById('code-output').textContent;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert("Code copied to clipboard!");
+                }).catch(() => {
+                    alert("Copy failed. You can manually select and copy the code.");
+                });
+            } else {
+                // fallback
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                    alert("Code copied to clipboard!");
+                } catch (err) {
+                    alert("Copy failed. You can manually select and copy the code.");
+                }
+                document.body.removeChild(ta);
+            }
+        }
+
+
+        // --- Navigation Builder ---
+        const sections = [
+            {id: 'intro', icon: '📖', label: 'Intro'},
+            {id: 'pantry', icon: '🥫', label: 'Pantry (Inputs)'},
+            {id: 'smoothers', icon: '🔪', label: 'Prep (Smooths)'},
+            {id: 'builder', icon: '🍳', label: 'Cooking (Code)'},
+            {id: 'validation', icon: '👅', label: 'Taste Test'},
+            {id: 'example', icon: '🍽️', label: 'Plating (Example)'},
+        ];
+
+        const navContainer = document.getElementById('nav-container');
+        sections.forEach(sec => {
+            const btn = document.createElement('button');
+            btn.className = 'step-card w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-stone-600 hover:text-stone-900 focus:outline-none flex items-center gap-3';
+            btn.innerHTML = `<span class="text-lg">${sec.icon}</span> ${sec.label}`;
+            btn.onclick = () => {
+                const el = document.getElementById(sec.id);
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                // Update active state
+                document.querySelectorAll('.step-card').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            };
+            navContainer.appendChild(btn);
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            // Set first nav active (if present)
+            const first = document.querySelector('.step-card');
+            if (first) first.classList.add('active');
+        });
+
+    </script>
+</body>
+</html>
